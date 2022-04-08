@@ -6,15 +6,18 @@
 */
 /////////////////////////////////////////////////////////////////
 
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:mqtt_client/mqtt_client.dart';
 import 'package:mqtt_client/mqtt_server_client.dart';
 import 'package:ndialog/ndialog.dart';
 import 'package:page_transition/page_transition.dart';
 import 'dart:async';
-import 'settings_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   runApp(const MyApp());
 }
 
@@ -50,11 +53,33 @@ class _MQTTClientState extends State<MQTTClient> {
   List<bool> _values = [false, false, false, false, false];
 
   MqttServerClient client = MqttServerClient('192.168.3.1', '');
+  String _user = "";
+  String _pass = "";
+
+  @override
+  void initState() {
+    super.initState();
+    _loadParams();
+  }
 
   @override
   void dispose() {
     idTextController.dispose();
     super.dispose();
+  }
+
+  //Loading counter value on start
+  void _loadParams() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    _user = prefs.getString('user') ?? "";
+    _pass = prefs.getString('pass') ?? "";
+  }
+
+  //Incrementing counter after click
+  void _saveParams() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    prefs.setString('user', _user);
+    prefs.setString('pass', _pass);
   }
 
   @override
@@ -72,18 +97,18 @@ class _MQTTClientState extends State<MQTTClient> {
                       child: Icon(
                         !isConnected ? Icons.cloud_off : Icons.cloud_rounded,
                       ))),
-              Padding(
-                  padding: const EdgeInsets.only(right: 20),
-                  child: GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                            context,
-                            PageTransition(
-                                type: PageTransitionType.rightToLeft,
-                                duration: Duration(milliseconds: 200),
-                                child: const Settings()));
-                      },
-                      child: Icon(Icons.settings)))
+              //Padding(
+              //    padding: const EdgeInsets.only(right: 20),
+              //    child: GestureDetector(
+              //        onTap: () {
+              //          Navigator.push(
+              //              context,
+              //              PageTransition(
+              //                  type: PageTransitionType.rightToLeft,
+              //                  duration: Duration(milliseconds: 200),
+              //                  child: const Settings()));
+              //        },
+              //        child: Icon(Icons.settings)))
             ],
             bottom: isConnected
                 ? const TabBar(
@@ -172,14 +197,48 @@ class _MQTTClientState extends State<MQTTClient> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: <Widget>[
-                        Text(
-                          "Connect to the server to see the app",
+                        const Text(
+                          "Identifiant et mot de passe",
                           style: TextStyle(fontSize: 20),
                         ),
+                        Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 16),
+                            child: TextFormField(
+                              obscureText: false,
+                              decoration: const InputDecoration(
+                                border: OutlineInputBorder(),
+                                labelText: 'Utilisateur',
+                              ),
+                              initialValue: _user,
+                              onChanged: (String user) {
+                                setState(() {
+                                  _user = user;
+                                });
+                                _saveParams();
+                              },
+                            )),
+                        Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 16),
+                            child: TextFormField(
+                              obscureText: true,
+                              decoration: const InputDecoration(
+                                border: OutlineInputBorder(),
+                                labelText: 'Mot de passe',
+                              ),
+                              initialValue: _pass,
+                              onChanged: (String pass) {
+                                setState(() {
+                                  _pass = pass;
+                                });
+                                _saveParams();
+                              },
+                            )),
                         FloatingActionButton.extended(
-                          label: Text('Connect'), // <-- Text
+                          label: const Text('Connect'), // <-- Text
                           backgroundColor: Colors.white,
-                          icon: Icon(
+                          icon: const Icon(
                             Icons.cloud_rounded,
                             size: 24.0,
                           ),
@@ -193,31 +252,29 @@ class _MQTTClientState extends State<MQTTClient> {
   }
 
   _connect() async {
+    // Check that the credentials are not empty
+    if (_user.isEmpty || _pass.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Entrez vos identifiants"),
+          duration: Duration(milliseconds: 400),
+        ),
+      );
+      return;
+    }
+
     ProgressDialog progressDialog = ProgressDialog(
       context,
       blur: 0,
       dialogTransitionType: DialogTransitionType.Shrink,
-      dismissable: false,
+      dismissable: true,
+      message: const Text("Please Wait, Connecting to Capsule..."),
+      title: const Text("Connecting"),
     );
     progressDialog.setLoadingWidget(const CircularProgressIndicator(
-      valueColor: AlwaysStoppedAnimation(Colors.red),
+      valueColor: AlwaysStoppedAnimation(Colors.white),
     ));
-    progressDialog
-        .setMessage(const Text("Please Wait, Connecting to Capsule..."));
-    progressDialog.setTitle(const Text("Connecting"));
     progressDialog.show();
-
-    // Add a timeout on connection
-    Future.delayed(Duration(seconds: 15)); // Duration to wait
-    setState(() {
-      progressDialog.dismiss();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Impossible to connect to the server, try again"),
-          duration: Duration(milliseconds: 400),
-        ),
-      );
-    });
 
     isConnected = await mqttConnect("androidapp");
     progressDialog.dismiss();
@@ -255,7 +312,7 @@ class _MQTTClientState extends State<MQTTClient> {
     final MqttConnectMessage connMess = MqttConnectMessage()
         .withClientIdentifier(uniqueId)
         .startClean()
-        .authenticateAs("admin", "pam1249CS1110ragot&");
+        .authenticateAs(_user, _pass);
     client.connectionMessage = connMess;
 
     await client.connect();
