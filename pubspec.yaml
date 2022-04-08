@@ -37,6 +37,8 @@ dependencies:
   mqtt_client: ^9.3.1
   ndialog: ^4.1.0
   flutter_grid_button:
+  shared_preferences:
+  page_transition: "^2.0.5"
 
 dev_dependencies:
   flutter_test:
