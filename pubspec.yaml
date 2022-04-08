@@ -38,7 +38,11 @@ dependencies:
   ndialog: ^4.1.0
   flutter_grid_button:
   shared_preferences:
+  wifi_info_flutter: ^2.0.2
+  connectivity_plus: ^2.2.1
+  permission_handler: ^9.2.0
   page_transition: "^2.0.5"
+  network_info_plus: ^2.1.3
 
 dev_dependencies:
   flutter_test:
