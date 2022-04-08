@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:page_transition/page_transition.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class Settings extends StatelessWidget {
@@ -27,22 +28,11 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPage extends State<SettingsPage> {
-  String _user = "";
-  String _pass = "";
+  final SettingsHandler _settingsHandler = SettingsHandler();
 
   @override
   void initState() {
     super.initState();
-    _loadParams();
-  }
-
-  //Loading counter value on start
-  void _loadParams() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _user = prefs.getString('user') ?? "";
-      _pass = prefs.getString('pass') ?? "";
-    });
   }
 
   @override
@@ -61,12 +51,12 @@ class _SettingsPage extends State<SettingsPage> {
                   border: OutlineInputBorder(),
                   labelText: 'Utilisateur',
                 ),
-                initialValue: _user,
+                initialValue: _settingsHandler._user,
                 onChanged: (String user) {
                   setState(() {
-                    _user = user;
+                    _settingsHandler._user = user;
                   });
-                  _saveParams();
+                  _settingsHandler._saveParams();
                 },
               )),
           Padding(
@@ -77,12 +67,12 @@ class _SettingsPage extends State<SettingsPage> {
                   border: OutlineInputBorder(),
                   labelText: 'Mot de passe',
                 ),
-                initialValue: _pass,
+                initialValue: _settingsHandler._pass,
                 onChanged: (String pass) {
                   setState(() {
-                    _pass = pass;
+                    _settingsHandler._pass = pass;
                   });
-                  _saveParams();
+                  _settingsHandler._saveParams();
                 },
               )),
           Center(
@@ -90,13 +80,30 @@ class _SettingsPage extends State<SettingsPage> {
               label: const Text('Save'), // <-- Text
               backgroundColor: Colors.white,
               onPressed: () {
-                _saveParams();
+                _settingsHandler._saveParams();
                 // return to previous page
                 Navigator.pop(context);
               },
             ),
           ),
         ]));
+  }
+}
+
+class SettingsHandler {
+  String _user = "";
+  String _pass = "";
+
+  // Initializing class
+  SettingsHandler() {
+    _loadParams();
+  }
+
+  //Loading counter value on start
+  void _loadParams() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    _user = prefs.getString('user') ?? "";
+    _pass = prefs.getString('pass') ?? "";
   }
 
   //Incrementing counter after click
