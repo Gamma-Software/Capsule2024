@@ -10,7 +10,9 @@ import 'package:flutter/material.dart';
 import 'package:mqtt_client/mqtt_client.dart';
 import 'package:mqtt_client/mqtt_server_client.dart';
 import 'package:ndialog/ndialog.dart';
+import 'package:page_transition/page_transition.dart';
 import 'dart:async';
+import 'settings_page.dart';
 
 void main() {
   runApp(const MyApp());
@@ -26,7 +28,7 @@ class MyApp extends StatelessWidget {
       title: 'Capsule 2024',
       themeMode: ThemeMode.dark,
       darkTheme: ThemeData.dark(),
-      home: const MQTTClient(),
+      home: MQTTClient(),
     );
   }
 }
@@ -70,13 +72,18 @@ class _MQTTClientState extends State<MQTTClient> {
                       child: Icon(
                         !isConnected ? Icons.cloud_off : Icons.cloud_rounded,
                       ))),
-              //Padding(
-              //    padding: const EdgeInsets.only(right: 20),
-              //    child: GestureDetector(
-              //        onTap: () {
-              //          print("settings");
-              //        },
-              //        child: Icon(Icons.settings)))
+              Padding(
+                  padding: const EdgeInsets.only(right: 20),
+                  child: GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                            context,
+                            PageTransition(
+                                type: PageTransitionType.rightToLeft,
+                                duration: Duration(milliseconds: 200),
+                                child: const Settings()));
+                      },
+                      child: Icon(Icons.settings)))
             ],
             bottom: isConnected
                 ? const TabBar(
@@ -186,17 +193,31 @@ class _MQTTClientState extends State<MQTTClient> {
   }
 
   _connect() async {
-    ProgressDialog progressDialog = ProgressDialog(context,
-        blur: 0,
-        dialogTransitionType: DialogTransitionType.Shrink,
-        dismissable: false);
+    ProgressDialog progressDialog = ProgressDialog(
+      context,
+      blur: 0,
+      dialogTransitionType: DialogTransitionType.Shrink,
+      dismissable: false,
+    );
     progressDialog.setLoadingWidget(const CircularProgressIndicator(
       valueColor: AlwaysStoppedAnimation(Colors.red),
     ));
     progressDialog
-        .setMessage(const Text("Please Wait, Connecting MQTT Broker"));
+        .setMessage(const Text("Please Wait, Connecting to Capsule..."));
     progressDialog.setTitle(const Text("Connecting"));
     progressDialog.show();
+
+    // Add a timeout on connection
+    Future.delayed(Duration(seconds: 15)); // Duration to wait
+    setState(() {
+      progressDialog.dismiss();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Impossible to connect to the server, try again"),
+          duration: Duration(milliseconds: 400),
+        ),
+      );
+    });
 
     isConnected = await mqttConnect("androidapp");
     progressDialog.dismiss();
@@ -231,8 +252,10 @@ class _MQTTClientState extends State<MQTTClient> {
     client.onDisconnected = onDisconnected;
     client.pongCallback = pong;
 
-    final MqttConnectMessage connMess =
-        MqttConnectMessage().withClientIdentifier(uniqueId).startClean();
+    final MqttConnectMessage connMess = MqttConnectMessage()
+        .withClientIdentifier(uniqueId)
+        .startClean()
+        .authenticateAs("admin", "pam1249CS1110ragot&");
     client.connectionMessage = connMess;
 
     await client.connect();
