@@ -70,7 +70,9 @@ class MapUtils {
 }
 
 class _MQTTClientState extends State<MQTTClient> {
-  final String _server = '192.168.3.1';
+  final String _localServer = '192.168.3.1';
+  final String _remoteServer = '192.168.255.6';
+  String _server = '192.168.3.1';
   String statusText = "Status Text";
   double voltage = 0.0;
   bool isConnected = false;
@@ -405,44 +407,6 @@ class _MQTTClientState extends State<MQTTClient> {
   }
 
   _connect() async {
-    // Check that the MQTT host is reachable
-    bool mqttAvailable = false;
-    await Socket.connect("192.168.3.1", 1883,
-            timeout: const Duration(seconds: 2))
-        .then((socket) {
-      mqttAvailable = true;
-      print("success");
-      socket.destroy();
-    }).catchError((error) {
-      print("Exception on Socket " + error.toString());
-    }).showProgressDialog(context,
-            message: const Text("Connexion"),
-            title: const Text("Tentative de connexion à Capsule"),
-            dismissable: false,
-            blur: 0);
-
-    if (!mqttAvailable) {
-      // Display an error dialog
-      showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              title: const Text('Erreur'),
-              content: const Text(
-                  'Capsule est injoignable, veuillez vérifier votre connexion au réseau CapsulePrivate ou passez par le VPN.'),
-              actions: <Widget>[
-                FlatButton(
-                  child: const Text('OK'),
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                ),
-              ],
-            );
-          });
-      return;
-    }
-
     // Check that the credentials are not empty
     if (_user.isEmpty || _pass.isEmpty) {
       showDialog(
@@ -463,6 +427,63 @@ class _MQTTClientState extends State<MQTTClient> {
             );
           });
       return;
+    }
+    // Check that the MQTT host is reachable locally
+    bool mqttAvailable = false;
+    bool localConnexion = true;
+    await Socket.connect(_localServer, 1883,
+            timeout: const Duration(seconds: 5))
+        .then((socket) {
+      mqttAvailable = true;
+      _server = _localServer;
+      print("success");
+      socket.destroy();
+    }).catchError((error) {
+      print("Exception on Socket " + error.toString());
+    }).showProgressDialog(context,
+            message: const Text("Connexion"),
+            title: const Text("Tentative de connexion à Capsule en local"),
+            dismissable: false,
+            blur: 0);
+
+    // If the MQTT host is not reachable locally, try to connect remotely
+    if (!mqttAvailable) {
+      await Socket.connect(_remoteServer, 1883,
+              timeout: const Duration(seconds: 5))
+          .then((socket) {
+        mqttAvailable = true;
+        localConnexion = false;
+        _server = _remoteServer;
+        print("success remotly");
+        socket.destroy();
+      }).catchError((error) {
+        print("Exception on Socket " + error.toString());
+      }).showProgressDialog(context,
+              message: const Text("Connexion"),
+              title: const Text("Tentative de connexion à Capsule en remote"),
+              dismissable: false,
+              blur: 0);
+      if (!mqttAvailable) {
+        // Display an error dialog
+        showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                title: const Text('Erreur'),
+                content: const Text(
+                    'Capsule est injoignable, veuillez vérifier votre connexion au réseau CapsulePrivate et votre VPN.'),
+                actions: <Widget>[
+                  FlatButton(
+                    child: const Text('OK'),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                  ),
+                ],
+              );
+            });
+        return;
+      }
     }
 
     ProgressDialog progressDialog = ProgressDialog(
@@ -504,6 +525,7 @@ class _MQTTClientState extends State<MQTTClient> {
     // client.securityContext = context;
 
     client.logging(on: true);
+    client.server = _server;
     client.keepAlivePeriod = 20;
     client.port = 1883;
     client.secure = false;
@@ -627,17 +649,13 @@ class _MQTTClientState extends State<MQTTClient> {
           });
           break;
         default:
+          print(
+              'EXAMPLE::Change notification:: topic is <${c[0].topic}>, payload is <-- $pt -->');
           break;
       }
-      print(
-          'EXAMPLE::Change notification:: topic is <${c[0].topic}>, payload is <-- $pt -->');
-      print('');
     });
 
-    client.published!.listen((MqttPublishMessage message) {
-      print(
-          'EXAMPLE::Published notification:: topic is ${message.variableHeader!.topicName}, with Qos ${message.header!.qos}');
-    });
+    client.published!.listen((MqttPublishMessage message) {});
 
     initPeriodicTopics();
     return true;
@@ -756,9 +774,9 @@ class _MQTTClientState extends State<MQTTClient> {
   void onConnected() {
     setStatus("Client connection was successful");
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Connected"),
-        duration: Duration(milliseconds: 400),
+      SnackBar(
+        content: Text("Connecté au serveur: " + _server),
+        duration: const Duration(milliseconds: 800),
       ),
     );
   }
