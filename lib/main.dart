@@ -186,6 +186,44 @@ class _MQTTClientState extends State<MQTTClient> {
                                 },
                               ),
                             ),
+                            ListTile(
+                              title: Text(
+                                'Output1',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .subtitle1
+                                    ?.copyWith(color: Colors.white),
+                              ),
+                              leading: Switch(
+                                value: _outputState,
+                                activeColor: Color(0xFF6200EE),
+                                onChanged: (bool value) {
+                                  setOutput1(value);
+                                  setState(() {
+                                    _outputState = value;
+                                  });
+                                },
+                              ),
+                            ),
+                            ListTile(
+                              title: Text(
+                                'OutputPower',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .subtitle1
+                                    ?.copyWith(color: Colors.white),
+                              ),
+                              leading: Switch(
+                                value: _outputPowerState,
+                                activeColor: Color(0xFF6200EE),
+                                onChanged: (bool value) {
+                                  setOutputPower(value);
+                                  setState(() {
+                                    _outputPowerState = value;
+                                  });
+                                },
+                              ),
+                            ),
                           ],
                         )
                       ],
