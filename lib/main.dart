@@ -57,9 +57,10 @@ class _MQTTClientState extends State<MQTTClient> {
   bool isConnected = false;
   String doorStatus = "Closed";
   TextEditingController idTextController = TextEditingController();
-  bool _din1State = false;
-  bool _din2State = false;
-  double _analogValue = 0.0;
+  bool _digitalInputState = false;
+  bool _isolatedInputState = false;
+  bool _inputPowerState = false;
+  double _analogInValue = 0.0;
   bool _outputPowerState = false;
   bool _outputState = false;
   bool _relayState = false;
@@ -145,21 +146,49 @@ class _MQTTClientState extends State<MQTTClient> {
                           child: Align(
                             alignment: Alignment.centerLeft,
                             child: Text(
-                              "Battery Voltage: " +
-                                  _analogValue.toString() +
+                              "Voltage batterie: " +
+                                  _analogInValue.toString() +
                                   "V",
                               style: const TextStyle(
                                   fontSize: 30, color: Colors.white),
                             ),
                           ),
-                        ), // Using Curves.elasticInOut
+                        ),
+                        // Using Curves.bounceIn
+                        Container(
+                          width: double.infinity,
+                          height: 100,
+                          color: Colors.transparent,
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              "Input power: " + _outputPowerState.toString(),
+                              style: const TextStyle(
+                                  fontSize: 30, color: Colors.white),
+                            ),
+                          ),
+                        ),
                         Container(
                           width: double.infinity,
                           height: 100,
                           child: Align(
                             alignment: Alignment.centerLeft,
                             child: Text(
-                              "Door Status: " + doorStatus,
+                              "Portes: " +
+                                  (_digitalInputState ? "ouvertes" : "fermées"),
+                              style: const TextStyle(
+                                  fontSize: 30, color: Colors.white),
+                            ),
+                          ),
+                        ),
+                        Container(
+                          width: double.infinity,
+                          height: 100,
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              "Isolated input: " +
+                                  (_isolatedInputState ? "high" : "low"),
                               style: const TextStyle(
                                   fontSize: 30, color: Colors.white),
                             ),
@@ -476,17 +505,22 @@ class _MQTTClientState extends State<MQTTClient> {
           break;
         case analogTopic:
           setState(() {
-            _analogValue = double.parse(pt);
+            _analogInValue = double.parse(pt);
           });
           break;
         case digital1Topic:
           setState(() {
-            _din1State = pt == '1' ? true : false;
+            _digitalInputState = pt == '1' ? true : false;
           });
           break;
         case digital2Topic:
           setState(() {
-            _din2State = pt == '1' ? true : false;
+            _isolatedInputState = pt == '1' ? true : false;
+          });
+          break;
+        case din3Topic:
+          setState(() {
+            _inputPowerState = pt == '1' ? true : false;
           });
           break;
         case outPowerTopic:
