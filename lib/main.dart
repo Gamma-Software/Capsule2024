@@ -6,6 +6,9 @@
 */
 /////////////////////////////////////////////////////////////////
 
+import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:mqtt_client/mqtt_client.dart';
@@ -14,6 +17,10 @@ import 'package:ndialog/ndialog.dart';
 import 'package:page_transition/page_transition.dart';
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:wifi_info_flutter/wifi_info_flutter.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:network_info_plus/network_info_plus.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -50,7 +57,12 @@ class _MQTTClientState extends State<MQTTClient> {
   bool isConnected = false;
   String doorStatus = "Closed";
   TextEditingController idTextController = TextEditingController();
-  List<bool> _values = [false, false, false, false, false];
+  bool _din1State = false;
+  bool _din2State = false;
+  double _analogValue = 0.0;
+  bool _outputPowerState = false;
+  bool _outputState = false;
+  bool _relayState = false;
 
   MqttServerClient client = MqttServerClient('192.168.3.1', '');
   String _user = "";
@@ -133,7 +145,9 @@ class _MQTTClientState extends State<MQTTClient> {
                           child: Align(
                             alignment: Alignment.centerLeft,
                             child: Text(
-                              "Battery Voltage: " + voltage.toString() + "V",
+                              "Battery Voltage: " +
+                                  _analogValue.toString() +
+                                  "V",
                               style: const TextStyle(
                                   fontSize: 30, color: Colors.white),
                             ),
@@ -153,37 +167,25 @@ class _MQTTClientState extends State<MQTTClient> {
                         ), // Using Curves.elasticInOut
                         Column(
                           children: <Widget>[
-                            for (int i = 0; i <= 4; i++)
-                              ListTile(
-                                title: Text(
-                                  'Switch ${i + 1}',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .subtitle1
-                                      ?.copyWith(
-                                          color: i == 4
-                                              ? Colors.white38
-                                              : Colors.white),
-                                ),
-                                leading: Switch(
-                                  value: _values[i],
-                                  activeColor: Color(0xFF6200EE),
-                                  onChanged: (bool value) {
-                                    client.publishMessage(
-                                        "request",
-                                        MqttQos.exactlyOnce,
-                                        MqttClientPayloadBuilder()
-                                            .addString("0 10 0 " +
-                                                _server +
-                                                " 502 5 1 6 326 " +
-                                                (value ? "1" : "0"))
-                                            .payload!);
-                                    setState(() {
-                                      _values[i] = value;
-                                    });
-                                  },
-                                ),
+                            ListTile(
+                              title: Text(
+                                'Relay',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .subtitle1
+                                    ?.copyWith(color: Colors.white),
                               ),
+                              leading: Switch(
+                                value: _relayState,
+                                activeColor: Color(0xFF6200EE),
+                                onChanged: (bool value) {
+                                  setRelay(value);
+                                  setState(() {
+                                    _relayState = value;
+                                  });
+                                },
+                              ),
+                            ),
                           ],
                         )
                       ],
@@ -252,14 +254,63 @@ class _MQTTClientState extends State<MQTTClient> {
   }
 
   _connect() async {
+    // Check that the MQTT host is reachable
+    bool mqttAvailable = false;
+    await Socket.connect("192.168.3.1", 1883,
+            timeout: const Duration(seconds: 2))
+        .then((socket) {
+      mqttAvailable = true;
+      print("success");
+      socket.destroy();
+    }).catchError((error) {
+      print("Exception on Socket " + error.toString());
+    }).showProgressDialog(context,
+            message: const Text("Connexion"),
+            title: const Text("Tentative de connexion à Capsule"),
+            dismissable: false,
+            blur: 0);
+
+    if (!mqttAvailable) {
+      // Display an error dialog
+      showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text('Erreur'),
+              content: const Text(
+                  'Capsule est injoignable, veuillez vérifier votre connexion au réseau CapsulePrivate ou passez par le VPN.'),
+              actions: <Widget>[
+                FlatButton(
+                  child: const Text('OK'),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                ),
+              ],
+            );
+          });
+      return;
+    }
+
     // Check that the credentials are not empty
     if (_user.isEmpty || _pass.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Entrez vos identifiants"),
-          duration: Duration(milliseconds: 400),
-        ),
-      );
+      showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text('Erreur'),
+              content: const Text(
+                  'Veuillez entrer un identifiant et un mot de passe.'),
+              actions: <Widget>[
+                FlatButton(
+                  child: const Text('OK'),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                ),
+              ],
+            );
+          });
       return;
     }
 
@@ -321,39 +372,89 @@ class _MQTTClientState extends State<MQTTClient> {
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Failed to connect"),
-          duration: Duration(milliseconds: 400),
+          content: Text("Connection impossible"),
+          duration: Duration(milliseconds: 800),
         ),
       );
       return false;
     }
 
-    const batteryVoltageTopic = 'router/1114481305/analog';
-    client.subscribe(batteryVoltageTopic, MqttQos.atMostOnce);
     const responseTopic = 'response';
     client.subscribe(responseTopic, MqttQos.atMostOnce);
+    const analogTopic = 'router/1114481305/analog';
+    client.subscribe(analogTopic, MqttQos.atMostOnce);
+    const digital1Topic = 'router/1114481305/digital1'; // Doors
+    client.subscribe(digital1Topic, MqttQos.atMostOnce);
+    const digital2Topic = 'router/1114481305/digital2';
+    client.subscribe(digital2Topic, MqttQos.atMostOnce);
+    const din3Topic = 'router/1114481305/pin3';
+    client.subscribe(din3Topic, MqttQos.atMostOnce);
+    const outPowerTopic = 'router/1114481305/pin4';
+    client.subscribe(outPowerTopic, MqttQos.atMostOnce);
 
     client.updates!.listen((List<MqttReceivedMessage<MqttMessage?>>? c) {
       final recMess = c![0].payload as MqttPublishMessage;
       final pt =
           MqttPublishPayload.bytesToStringAsString(recMess.payload.message);
       switch (c[0].topic) {
-        case batteryVoltageTopic:
-          setState(() {
-            voltage = double.parse(pt);
-          });
-          break;
         case responseTopic:
           // Split the payload by space
           List<String> response = pt.split(' ');
           // TODO Handle the errors
           switch (response[0]) {
+            // Is the new Relay state is received ?
             case '10':
-              setState(() {
-                _values[0] = int.parse(response[2]) == 1 ? true : false;
-              });
+              if (response[1] == "OK") print('Relay state received');
+              break;
+            // Is the new Output state is received ?
+            case '11':
+              if (response[1] == "OK") print('Output state received');
+              break;
+            // Is the new Output power state is received ?
+            case '12':
+              if (response[1] == "OK") print('Output power state received');
+              //setState(() {
+              //  _values[0] = int.parse(response[2]) == 1 ? true : false;
+              //});
+              break;
+            case '13':
+              if (response[1] == "OK") {
+                setState(() {
+                  _relayState = int.parse(response[2]) == 1 ? true : false;
+                });
+              } else {
+                // Inverse the state after the request failed
+                _relayState = !_relayState;
+              }
+              break;
+            case '14':
+              if (response[1] == "OK") {
+                setState(() {
+                  _outputState = int.parse(response[2]) == 1 ? true : false;
+                });
+              }
               break;
           }
+          break;
+        case analogTopic:
+          setState(() {
+            _analogValue = double.parse(pt);
+          });
+          break;
+        case digital1Topic:
+          setState(() {
+            _din1State = pt == '1' ? true : false;
+          });
+          break;
+        case digital2Topic:
+          setState(() {
+            _din2State = pt == '1' ? true : false;
+          });
+          break;
+        case outPowerTopic:
+          setState(() {
+            _outputPowerState = pt == '1' ? true : false;
+          });
           break;
         default:
           break;
@@ -368,32 +469,52 @@ class _MQTTClientState extends State<MQTTClient> {
           'EXAMPLE::Published notification:: topic is ${message.variableHeader!.topicName}, with Qos ${message.header!.qos}');
     });
 
-    /// Lets publish to our topic
-    /// Use the payload builder rather than a raw buffer
-    /// Our known topic to publish to
-    const pubTopic = 'request';
-    final requestOutput4Change = MqttClientPayloadBuilder();
-    requestOutput4Change.addString("0 65442 0 " + _server + " 502 5 1 6 326 1");
-
+    initPeriodicTopics();
     return true;
   }
 
-  void setStatus(String content) {
-    setState(() {
-      statusText = content;
-    });
+  void setRelay(bool state) {
+    client.publishMessage(
+        "request",
+        MqttQos.exactlyOnce,
+        MqttClientPayloadBuilder()
+            .addString("0 10 0 " +
+                _server +
+                " 502 5 1 6 203 " +
+                (state ? 1 : 0).toString())
+            .payload!);
+    // TODO Check if the request was recieved
   }
 
-  void onConnected() {
-    setStatus("Client connection was successful");
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Connected"),
-        duration: Duration(milliseconds: 400),
-      ),
-    );
-    // Start the async function to retrieve the battery voltage
-    Timer.periodic(const Duration(seconds: 1), (timer) {
+  void setOutput1(bool state) {
+    client.publishMessage(
+        "request",
+        MqttQos.exactlyOnce,
+        MqttClientPayloadBuilder()
+            .addString("0 11 0 " +
+                _server +
+                " 502 5 1 6 202 " +
+                (state ? 1 : 0).toString())
+            .payload!);
+    // TODO Check if the request was recieved
+  }
+
+  void setOutputPower(bool state) {
+    client.publishMessage(
+        "request",
+        MqttQos.exactlyOnce,
+        MqttClientPayloadBuilder()
+            .addString("0 12 0 " +
+                _server +
+                " 502 5 1 6 326 " +
+                (state ? 1 : 0).toString())
+            .payload!);
+    // TODO Check if the request was recieved
+  }
+
+  void initPeriodicTopics() {
+    // Start the async function to retrieve the iostates
+    Timer.periodic(const Duration(milliseconds: 1500), (timer) {
       // If the client is not connected anymore, stop the timer
       if (!isConnected) {
         timer.cancel();
@@ -401,7 +522,45 @@ class _MQTTClientState extends State<MQTTClient> {
       }
       client.publishMessage("router/get", MqttQos.exactlyOnce,
           MqttClientPayloadBuilder().addString("analog").payload!);
-      print("Publishing Message");
+      client.publishMessage("router/get", MqttQos.exactlyOnce,
+          MqttClientPayloadBuilder().addString("digital1").payload!);
+      client.publishMessage("router/get", MqttQos.exactlyOnce,
+          MqttClientPayloadBuilder().addString("digital2").payload!);
+      client.publishMessage("router/get", MqttQos.exactlyOnce,
+          MqttClientPayloadBuilder().addString("pin3").payload!);
+      client.publishMessage("router/get", MqttQos.exactlyOnce,
+          MqttClientPayloadBuilder().addString("pin4").payload!);
+      client.publishMessage("router/get", MqttQos.exactlyOnce,
+          MqttClientPayloadBuilder().addString("uptime").payload!);
+      client.publishMessage(
+          "request",
+          MqttQos.exactlyOnce,
+          MqttClientPayloadBuilder()
+              .addString("0 13 0 " + _server + " 502 5 1 3 203 1")
+              .payload!);
+      client.publishMessage(
+          "request",
+          MqttQos.exactlyOnce,
+          MqttClientPayloadBuilder()
+              .addString("0 14 0 " + _server + " 502 5 1 3 202 1")
+              .payload!);
+    });
+    Timer.periodic(const Duration(seconds: 2000), (timer) {
+      // If the client is not connected anymore, stop the timer
+      if (!isConnected) {
+        timer.cancel();
+        return;
+      }
+      client.publishMessage("router/get", MqttQos.exactlyOnce,
+          MqttClientPayloadBuilder().addString("temperature").payload!);
+      client.publishMessage("router/get", MqttQos.exactlyOnce,
+          MqttClientPayloadBuilder().addString("operator").payload!);
+      client.publishMessage("router/get", MqttQos.exactlyOnce,
+          MqttClientPayloadBuilder().addString("signal").payload!);
+      client.publishMessage("router/get", MqttQos.exactlyOnce,
+          MqttClientPayloadBuilder().addString("network").payload!);
+      client.publishMessage("router/get", MqttQos.exactlyOnce,
+          MqttClientPayloadBuilder().addString("connection").payload!);
     });
     Timer.periodic(const Duration(seconds: 1), (timer) {
       // If the client is not connected anymore, stop the timer
@@ -418,13 +577,29 @@ class _MQTTClientState extends State<MQTTClient> {
     });
   }
 
+  void setStatus(String content) {
+    setState(() {
+      statusText = content;
+    });
+  }
+
+  void onConnected() {
+    setStatus("Client connection was successful");
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Connected"),
+        duration: Duration(milliseconds: 400),
+      ),
+    );
+  }
+
   void onDisconnected() {
     setStatus("Client Disconnected");
     isConnected = false;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text("Disconnected"),
-        duration: Duration(milliseconds: 400),
+        duration: Duration(milliseconds: 800),
       ),
     );
   }
