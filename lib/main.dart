@@ -13,10 +13,12 @@ import 'package:ndialog/ndialog.dart';
 import 'dart:async';
 
 void main() {
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({Key? key}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -24,7 +26,7 @@ class MyApp extends StatelessWidget {
       title: 'Capsule 2024',
       themeMode: ThemeMode.dark,
       darkTheme: ThemeData.dark(),
-      home: MQTTClient(),
+      home: const MQTTClient(),
     );
   }
 }
@@ -37,6 +39,7 @@ class MQTTClient extends StatefulWidget {
 }
 
 class _MQTTClientState extends State<MQTTClient> {
+  final String _server = '192.168.3.1';
   String statusText = "Status Text";
   double voltage = 0.0;
   bool isConnected = false;
@@ -44,7 +47,7 @@ class _MQTTClientState extends State<MQTTClient> {
   TextEditingController idTextController = TextEditingController();
   List<bool> _values = [false, false, false, false, false];
 
-  final MqttServerClient client = MqttServerClient('192.168.3.1', '');
+  MqttServerClient client = MqttServerClient('192.168.3.1', '');
 
   @override
   void dispose() {
@@ -67,13 +70,13 @@ class _MQTTClientState extends State<MQTTClient> {
                       child: Icon(
                         !isConnected ? Icons.cloud_off : Icons.cloud_rounded,
                       ))),
-              Padding(
-                  padding: const EdgeInsets.only(right: 20),
-                  child: GestureDetector(
-                      onTap: () {
-                        print("settings");
-                      },
-                      child: Icon(Icons.settings)))
+              //Padding(
+              //    padding: const EdgeInsets.only(right: 20),
+              //    child: GestureDetector(
+              //        onTap: () {
+              //          print("settings");
+              //        },
+              //        child: Icon(Icons.settings)))
             ],
             bottom: isConnected
                 ? const TabBar(
@@ -138,9 +141,10 @@ class _MQTTClientState extends State<MQTTClient> {
                                         "request",
                                         MqttQos.exactlyOnce,
                                         MqttClientPayloadBuilder()
-                                            .addString(
-                                                "0 10 0 192.168.3.1 502 5 1 6 326 " +
-                                                    (value ? "1" : "0"))
+                                            .addString("0 10 0 " +
+                                                _server +
+                                                " 502 5 1 6 326 " +
+                                                (value ? "1" : "0"))
                                             .payload!);
                                     setState(() {
                                       _values[i] = value;
@@ -289,7 +293,7 @@ class _MQTTClientState extends State<MQTTClient> {
     /// Our known topic to publish to
     const pubTopic = 'request';
     final requestOutput4Change = MqttClientPayloadBuilder();
-    requestOutput4Change.addString('0 65442 0 192.168.3.1 502 5 1 6 326 1');
+    requestOutput4Change.addString("0 65442 0 " + _server + " 502 5 1 6 326 1");
 
     return true;
   }
@@ -329,7 +333,7 @@ class _MQTTClientState extends State<MQTTClient> {
           "request",
           MqttQos.exactlyOnce,
           MqttClientPayloadBuilder()
-              .addString("0 10 0 192.168.3.1 502 5 1 3 326 1")
+              .addString("0 10 0 " + _server + " 502 5 1 3 326 1")
               .payload!);
     });
   }
