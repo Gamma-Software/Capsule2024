@@ -7,6 +7,8 @@
 /////////////////////////////////////////////////////////////////
 
 import 'dart:convert';
+import 'dart:typed_data';
+import 'package:latlong2/latlong.dart';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -21,6 +23,9 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:wifi_info_flutter/wifi_info_flutter.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:network_info_plus/network_info_plus.dart';
+import 'package:maps_launcher/maps_launcher.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -50,6 +55,20 @@ class MQTTClient extends StatefulWidget {
   _MQTTClientState createState() => _MQTTClientState();
 }
 
+class MapUtils {
+  MapUtils._();
+
+  static Future<void> openMap(double latitude, double longitude) async {
+    String googleUrl =
+        'https://www.google.com/maps/search/?api=1&query=$latitude,$longitude';
+    if (await canLaunch(googleUrl)) {
+      await launch(googleUrl);
+    } else {
+      throw 'Could not open the map.';
+    }
+  }
+}
+
 class _MQTTClientState extends State<MQTTClient> {
   final String _server = '192.168.3.1';
   String statusText = "Status Text";
@@ -64,6 +83,7 @@ class _MQTTClientState extends State<MQTTClient> {
   bool _outputPowerState = false;
   bool _outputState = false;
   bool _relayState = false;
+  LatLng _capsuleLocation = LatLng(0.0, 0.0);
 
   MqttServerClient client = MqttServerClient('192.168.3.1', '');
   String _user = "";
@@ -257,8 +277,72 @@ class _MQTTClientState extends State<MQTTClient> {
                         )
                       ],
                     ),
-                    Center(child: Text("Transit")),
-                    Center(child: Text("Bike"))
+                    Stack(children: <Widget>[
+                      FlutterMap(
+                        options: MapOptions(
+                          center: _capsuleLocation,
+                          zoom: 13.0,
+                        ),
+                        layers: [
+                          TileLayerOptions(
+                            urlTemplate:
+                                "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                            subdomains: ['a', 'b', 'c'],
+                            attributionBuilder: (_) {
+                              return Text("© OpenStreetMap contributors");
+                            },
+                          ),
+                          MarkerLayerOptions(
+                            markers: [
+                              Marker(
+                                width: 150.0,
+                                height: 150.0,
+                                point: _capsuleLocation,
+                                rotate: false,
+                                builder: (ctx) => Container(
+                                  child: const Icon(
+                                    Icons.gps_fixed,
+                                    color: Colors.lightBlue,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      // align it to the bottom center, you can try different options too (e.g topLeft,centerLeft)
+                      Align(
+                        alignment: Alignment.bottomRight,
+                        // add your floating action button
+                        child: FloatingActionButton.extended(
+                            label: const Text('Where is Capsule ?'), // <-- Text
+                            backgroundColor: Colors.white,
+                            icon: const Icon(
+                              Icons.near_me,
+                              size: 24.0,
+                            ),
+                            onPressed: () {
+                              MapUtils.openMap(_capsuleLocation.latitude,
+                                  _capsuleLocation.longitude);
+                            }),
+                      )
+                    ]),
+                    Center(
+                        child: Align(
+                      alignment: Alignment.bottomRight,
+                      // add your floating action button
+                      child: FloatingActionButton.extended(
+                          label: const Text('Where is Capsule ?'), // <-- Text
+                          backgroundColor: Colors.white,
+                          icon: const Icon(
+                            Icons.near_me,
+                            size: 24.0,
+                          ),
+                          onPressed: () {
+                            MapsLauncher.launchCoordinates(37.4220041,
+                                -122.0862462, 'Google Headquarters are here');
+                          }),
+                    ))
                   ],
                 )
               : Container(
@@ -458,6 +542,10 @@ class _MQTTClientState extends State<MQTTClient> {
     client.subscribe(din3Topic, MqttQos.atMostOnce);
     const outPowerTopic = 'router/1114481305/pin4';
     client.subscribe(outPowerTopic, MqttQos.atMostOnce);
+    const gpsLatTopic = 'router/gps/lat';
+    client.subscribe(gpsLatTopic, MqttQos.atMostOnce);
+    const gpsLonTopic = 'router/gps/lon';
+    client.subscribe(gpsLonTopic, MqttQos.atMostOnce);
 
     client.updates!.listen((List<MqttReceivedMessage<MqttMessage?>>? c) {
       final recMess = c![0].payload as MqttPublishMessage;
@@ -526,6 +614,16 @@ class _MQTTClientState extends State<MQTTClient> {
         case outPowerTopic:
           setState(() {
             _outputPowerState = pt == '1' ? true : false;
+          });
+          break;
+        case gpsLatTopic:
+          setState(() {
+            _capsuleLocation.latitude = double.parse(pt);
+          });
+          break;
+        case gpsLonTopic:
+          setState(() {
+            _capsuleLocation.longitude = double.parse(pt);
           });
           break;
         default:
