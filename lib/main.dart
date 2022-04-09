@@ -74,6 +74,7 @@ class _MQTTClientState extends State<MQTTClient> {
   final String _remoteServer = '192.168.255.6';
   String _server = '192.168.3.1';
   String statusText = "Status Text";
+  double _routerTemperature = 0.0;
   double voltage = 0.0;
   bool isConnected = false;
   String doorStatus = "Closed";
@@ -564,6 +565,8 @@ class _MQTTClientState extends State<MQTTClient> {
     client.subscribe(din3Topic, MqttQos.atMostOnce);
     const outPowerTopic = 'router/1114481305/pin4';
     client.subscribe(outPowerTopic, MqttQos.atMostOnce);
+    const temperatureTopic = 'router/1114481305/temperature';
+    client.subscribe(temperatureTopic, MqttQos.atMostOnce);
     const gpsLatTopic = 'router/gps/lat';
     client.subscribe(gpsLatTopic, MqttQos.atMostOnce);
     const gpsLonTopic = 'router/gps/lon';
@@ -612,6 +615,11 @@ class _MQTTClientState extends State<MQTTClient> {
               }
               break;
           }
+          break;
+        case temperatureTopic:
+          setState(() {
+            _routerTemperature = double.parse(pt);
+          });
           break;
         case analogTopic:
           setState(() {
