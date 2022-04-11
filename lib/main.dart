@@ -6,26 +6,18 @@
 */
 /////////////////////////////////////////////////////////////////
 
-import 'dart:convert';
-import 'dart:typed_data';
 import 'package:latlong2/latlong.dart';
 import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:mqtt_client/mqtt_client.dart';
 import 'package:mqtt_client/mqtt_server_client.dart';
 import 'package:ndialog/ndialog.dart';
-import 'package:page_transition/page_transition.dart';
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:wifi_info_flutter/wifi_info_flutter.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:network_info_plus/network_info_plus.dart';
-import 'package:maps_launcher/maps_launcher.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'leveling_bubble.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -43,7 +35,7 @@ class MyApp extends StatelessWidget {
       title: 'Capsule 2024',
       themeMode: ThemeMode.dark,
       darkTheme: ThemeData.dark(),
-      home: MQTTClient(),
+      home: const MQTTClient(),
     );
   }
 }
@@ -86,7 +78,7 @@ class _MQTTClientState extends State<MQTTClient> {
   bool _outputPowerState = false;
   bool _outputState = false;
   bool _relayState = false;
-  LatLng _capsuleLocation = LatLng(0.0, 0.0);
+  final LatLng _capsuleLocation = LatLng(0.0, 0.0);
 
   MqttServerClient client = MqttServerClient('192.168.3.1', '');
   String _user = "";
@@ -229,7 +221,7 @@ class _MQTTClientState extends State<MQTTClient> {
                               ),
                               leading: Switch(
                                 value: _relayState,
-                                activeColor: Color(0xFF6200EE),
+                                activeColor: const Color(0xFF6200EE),
                                 onChanged: (bool value) {
                                   setRelay(value);
                                   setState(() {
@@ -248,7 +240,7 @@ class _MQTTClientState extends State<MQTTClient> {
                               ),
                               leading: Switch(
                                 value: _outputState,
-                                activeColor: Color(0xFF6200EE),
+                                activeColor: const Color(0xFF6200EE),
                                 onChanged: (bool value) {
                                   setOutput1(value);
                                   setState(() {
@@ -267,7 +259,7 @@ class _MQTTClientState extends State<MQTTClient> {
                               ),
                               leading: Switch(
                                 value: _outputPowerState,
-                                activeColor: Color(0xFF6200EE),
+                                activeColor: const Color(0xFF6200EE),
                                 onChanged: (bool value) {
                                   setOutputPower(value);
                                   setState(() {
@@ -292,7 +284,7 @@ class _MQTTClientState extends State<MQTTClient> {
                                 "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
                             subdomains: ['a', 'b', 'c'],
                             attributionBuilder: (_) {
-                              return Text("© OpenStreetMap contributors");
+                              return const Text("© OpenStreetMap contributors");
                             },
                           ),
                           MarkerLayerOptions(
@@ -302,11 +294,9 @@ class _MQTTClientState extends State<MQTTClient> {
                                 height: 150.0,
                                 point: _capsuleLocation,
                                 rotate: false,
-                                builder: (ctx) => Container(
-                                  child: const Icon(
-                                    Icons.gps_fixed,
-                                    color: Colors.lightBlue,
-                                  ),
+                                builder: (ctx) => const Icon(
+                                  Icons.gps_fixed,
+                                  color: Colors.lightBlue,
                                 ),
                               ),
                             ],
@@ -330,78 +320,80 @@ class _MQTTClientState extends State<MQTTClient> {
                             }),
                       )
                     ]),
-                    Center(
-                        child: Align(
-                      alignment: Alignment.bottomRight,
-                      // add your floating action button
-                      child: FloatingActionButton.extended(
-                          label: const Text('Where is Capsule ?'), // <-- Text
-                          backgroundColor: Colors.white,
-                          icon: const Icon(
-                            Icons.near_me,
-                            size: 24.0,
-                          ),
-                          onPressed: () {
-                            MapsLauncher.launchCoordinates(37.4220041,
-                                -122.0862462, 'Google Headquarters are here');
-                          }),
-                    ))
+                    CustomPaint(
+                      painter: LevelingBubble(),
+                      size: const Size(double.infinity, double.infinity),
+                    ),
+                    //Center(
+                    //    child: Align(
+                    //  alignment: Alignment.bottomRight,
+                    //  // add your floating action button
+                    //  child: FloatingActionButton.extended(
+                    //      label: const Text('Where is Capsule ?'), // <-- Text
+                    //      backgroundColor: Colors.white,
+                    //      icon: const Icon(
+                    //        Icons.near_me,
+                    //        size: 24.0,
+                    //      ),
+                    //      onPressed: () {
+                    //        MapsLauncher.launchCoordinates(37.4220041,
+                    //            -122.0862462, 'Google Headquarters are here');
+                    //      }),
+                    //))
                   ],
                 )
-              : Container(
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: <Widget>[
-                        const Text(
-                          "Identifiant et mot de passe",
-                          style: TextStyle(fontSize: 20),
+              : Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      const Text(
+                        "Identifiant et mot de passe",
+                        style: TextStyle(fontSize: 20),
+                      ),
+                      Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 16),
+                          child: TextFormField(
+                            obscureText: false,
+                            decoration: const InputDecoration(
+                              border: OutlineInputBorder(),
+                              labelText: 'Utilisateur',
+                            ),
+                            initialValue: _user,
+                            onChanged: (String user) {
+                              setState(() {
+                                _user = user;
+                              });
+                              _saveParams();
+                            },
+                          )),
+                      Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 16),
+                          child: TextFormField(
+                            obscureText: true,
+                            decoration: const InputDecoration(
+                              border: OutlineInputBorder(),
+                              labelText: 'Mot de passe',
+                            ),
+                            initialValue: _pass,
+                            onChanged: (String pass) {
+                              setState(() {
+                                _pass = pass;
+                              });
+                              _saveParams();
+                            },
+                          )),
+                      FloatingActionButton.extended(
+                        label: const Text('Connect'), // <-- Text
+                        backgroundColor: Colors.white,
+                        icon: const Icon(
+                          Icons.cloud_rounded,
+                          size: 24.0,
                         ),
-                        Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 16),
-                            child: TextFormField(
-                              obscureText: false,
-                              decoration: const InputDecoration(
-                                border: OutlineInputBorder(),
-                                labelText: 'Utilisateur',
-                              ),
-                              initialValue: _user,
-                              onChanged: (String user) {
-                                setState(() {
-                                  _user = user;
-                                });
-                                _saveParams();
-                              },
-                            )),
-                        Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 16),
-                            child: TextFormField(
-                              obscureText: true,
-                              decoration: const InputDecoration(
-                                border: OutlineInputBorder(),
-                                labelText: 'Mot de passe',
-                              ),
-                              initialValue: _pass,
-                              onChanged: (String pass) {
-                                setState(() {
-                                  _pass = pass;
-                                });
-                                _saveParams();
-                              },
-                            )),
-                        FloatingActionButton.extended(
-                          label: const Text('Connect'), // <-- Text
-                          backgroundColor: Colors.white,
-                          icon: const Icon(
-                            Icons.cloud_rounded,
-                            size: 24.0,
-                          ),
-                          onPressed: _connect,
-                        ),
-                      ],
-                    ),
+                        onPressed: _connect,
+                      ),
+                    ],
                   ),
                 ),
         ));
@@ -418,7 +410,7 @@ class _MQTTClientState extends State<MQTTClient> {
               content: const Text(
                   'Veuillez entrer un identifiant et un mot de passe.'),
               actions: <Widget>[
-                FlatButton(
+                TextButton(
                   child: const Text('OK'),
                   onPressed: () {
                     Navigator.of(context).pop();
@@ -431,7 +423,6 @@ class _MQTTClientState extends State<MQTTClient> {
     }
     // Check that the MQTT host is reachable locally
     bool mqttAvailable = false;
-    bool localConnexion = true;
     await Socket.connect(_localServer, 1883,
             timeout: const Duration(seconds: 5))
         .then((socket) {
@@ -453,7 +444,6 @@ class _MQTTClientState extends State<MQTTClient> {
               timeout: const Duration(seconds: 5))
           .then((socket) {
         mqttAvailable = true;
-        localConnexion = false;
         _server = _remoteServer;
         print("success remotly");
         socket.destroy();
@@ -474,7 +464,7 @@ class _MQTTClientState extends State<MQTTClient> {
                 content: const Text(
                     'Capsule est injoignable, veuillez vérifier votre connexion au réseau CapsulePrivate et votre VPN.'),
                 actions: <Widget>[
-                  FlatButton(
+                  TextButton(
                     child: const Text('OK'),
                     onPressed: () {
                       Navigator.of(context).pop();
@@ -679,7 +669,6 @@ class _MQTTClientState extends State<MQTTClient> {
                 " 502 5 1 6 203 " +
                 (state ? 1 : 0).toString())
             .payload!);
-    // TODO Check if the request was recieved
   }
 
   void setOutput1(bool state) {
@@ -692,7 +681,6 @@ class _MQTTClientState extends State<MQTTClient> {
                 " 502 5 1 6 202 " +
                 (state ? 1 : 0).toString())
             .payload!);
-    // TODO Check if the request was recieved
   }
 
   void setOutputPower(bool state) {
@@ -705,7 +693,6 @@ class _MQTTClientState extends State<MQTTClient> {
                 " 502 5 1 6 326 " +
                 (state ? 1 : 0).toString())
             .payload!);
-    // TODO Check if the request was recieved
   }
 
   void initPeriodicTopics() {
