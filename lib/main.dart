@@ -1,10 +1,4 @@
-/////////////////////////////////////////////////////////////////
-/*
-  AWS IoT | Flutter MQTT Client App [Full Version]
-  Video Tutorial: https://youtu.be/aY7i0xnQW54
-  Created by Eric N. (ThatProject)
-*/
-/////////////////////////////////////////////////////////////////
+import 'dart:math';
 
 import 'package:latlong2/latlong.dart';
 import 'dart:io';
@@ -302,27 +296,26 @@ class _MQTTClientState extends State<MQTTClient> {
                             ],
                           ),
                         ],
-                      ),
-                      // align it to the bottom center, you can try different options too (e.g topLeft,centerLeft)
-                      Align(
-                        alignment: Alignment.bottomRight,
-                        // add your floating action button
-                        child: FloatingActionButton.extended(
-                            label: const Text('Where is Capsule ?'), // <-- Text
-                            backgroundColor: Colors.white,
-                            icon: const Icon(
-                              Icons.near_me,
-                              size: 24.0,
-                            ),
-                            onPressed: () {
-                              MapUtils.openMap(_capsuleLocation.latitude,
-                                  _capsuleLocation.longitude);
-                            }),
                       )
                     ]),
-                    CustomPaint(
-                      painter: LevelingBubble(),
-                      size: const Size(double.infinity, double.infinity),
+                    // align it to the bottom center, you can try different options too (e.g topLeft,centerLeft)
+                    Center(
+                      child: TweenAnimationBuilder(
+                        duration: const Duration(seconds: 1),
+                        tween: Tween(
+                            begin: (Random().nextDouble() - 0.5) *
+                                Random().nextDouble(),
+                            end: (Random().nextDouble() - 0.5) *
+                                Random().nextDouble()),
+                        curve: Curves.linear,
+                        builder: (BuildContext context, dynamic value,
+                            Widget? child) {
+                          return CustomPaint(
+                            painter: LevelingBubble(
+                                levelingBubbleX: value, levelingBubbleY: value),
+                          );
+                        },
+                      ),
                     ),
                     //Center(
                     //    child: Align(
