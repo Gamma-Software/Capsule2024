@@ -46,6 +46,7 @@ dependencies:
   maps_launcher: ^2.0.1
   flutter_map: ^0.14.0
   url_launcher: ^6.0.20
+  motion_sensors: ^0.1.0
 
 dev_dependencies:
   flutter_test:
