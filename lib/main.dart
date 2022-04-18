@@ -5,13 +5,13 @@ import 'package:latlong2/latlong.dart';
 import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
+import 'package:maps_launcher/maps_launcher.dart';
 import 'package:mqtt_client/mqtt_client.dart';
 import 'package:mqtt_client/mqtt_server_client.dart';
 import 'package:ndialog/ndialog.dart';
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:capsule2024/widget/leveling_bubble.dart';
 
 void main() {
@@ -40,20 +40,6 @@ class MQTTClient extends StatefulWidget {
 
   @override
   _MQTTClientState createState() => _MQTTClientState();
-}
-
-class MapUtils {
-  MapUtils._();
-
-  static Future<void> openMap(double latitude, double longitude) async {
-    String googleUrl =
-        'https://www.google.com/maps/search/?api=1&query=$latitude,$longitude';
-    if (await canLaunch(googleUrl)) {
-      await launch(googleUrl);
-    } else {
-      throw 'Could not open the map.';
-    }
-  }
 }
 
 class _MQTTClientState extends State<MQTTClient> {
@@ -292,7 +278,23 @@ class _MQTTClientState extends State<MQTTClient> {
                             ],
                           ),
                         ],
-                      )
+                      ),
+                      Align(
+                          alignment: Alignment.bottomCenter,
+                          child: FloatingActionButton.extended(
+                              label:
+                                  const Text('Trajet vers Capsule'), // <-- Text
+                              backgroundColor: Colors.white,
+                              icon: const Icon(
+                                Icons.near_me,
+                                size: 24.0,
+                              ),
+                              onPressed: () {
+                                MapsLauncher.launchCoordinates(
+                                    _capsuleLocation.latitude,
+                                    _capsuleLocation.longitude,
+                                    'Capsule est ici');
+                              })),
                     ]),
                     // align it to the bottom center, you can try different options too (e.g topLeft,centerLeft)
                     Center(
@@ -313,22 +315,6 @@ class _MQTTClientState extends State<MQTTClient> {
                         },
                       ),
                     ),
-                    //Center(
-                    //    child: Align(
-                    //  alignment: Alignment.bottomRight,
-                    //  // add your floating action button
-                    //  child: FloatingActionButton.extended(
-                    //      label: const Text('Where is Capsule ?'), // <-- Text
-                    //      backgroundColor: Colors.white,
-                    //      icon: const Icon(
-                    //        Icons.near_me,
-                    //        size: 24.0,
-                    //      ),
-                    //      onPressed: () {
-                    //        MapsLauncher.launchCoordinates(37.4220041,
-                    //            -122.0862462, 'Google Headquarters are here');
-                    //      }),
-                    //))
                   ],
                 )
               : Center(
