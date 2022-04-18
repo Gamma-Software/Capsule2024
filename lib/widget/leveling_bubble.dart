@@ -43,7 +43,7 @@ class LevelingBubble extends CustomPainter {
       ..color = leveled
           ? const Color.fromARGB(255, 45, 162, 25)
           : const Color.fromARGB(255, 255, 2, 2)
-      ..strokeWidth = 2
+      ..strokeWidth = leveled ? 5 : 2
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
     Offset center = Offset(size.width / 2, size.height / 2);
@@ -52,7 +52,7 @@ class LevelingBubble extends CustomPainter {
     // Inner circle
     var paintInnerCircle = Paint()
       ..color = const Color.fromARGB(255, 45, 162, 25)
-      ..strokeWidth = 2
+      ..strokeWidth = leveled ? 5 : 2
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
     canvas.drawCircle(center, 20, paintInnerCircle);
