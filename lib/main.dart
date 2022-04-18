@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:capsule2024/service/notification/notification_service.dart';
 import 'package:latlong2/latlong.dart';
 import 'dart:io';
 import 'package:flutter/services.dart';
@@ -78,10 +79,13 @@ class _MQTTClientState extends State<MQTTClient> {
   String _user = "";
   String _pass = "";
 
+  final NotificationService _notificationService = NotificationService();
+
   @override
   void initState() {
     super.initState();
     _loadParams();
+    _notificationService.init();
   }
 
   @override
@@ -122,15 +126,7 @@ class _MQTTClientState extends State<MQTTClient> {
               //Padding(
               //    padding: const EdgeInsets.only(right: 20),
               //    child: GestureDetector(
-              //        onTap: () {
-              //          Navigator.push(
-              //              context,
-              //              PageTransition(
-              //                  type: PageTransitionType.rightToLeft,
-              //                  duration: Duration(milliseconds: 200),
-              //                  child: const Settings()));
-              //        },
-              //        child: Icon(Icons.settings)))
+              //        onTap: () {}, child: const Icon(Icons.settings)))
             ],
             bottom: isConnected
                 ? const TabBar(
@@ -518,7 +514,7 @@ class _MQTTClientState extends State<MQTTClient> {
     client.pongCallback = pong;
 
     final MqttConnectMessage connMess = MqttConnectMessage()
-        .withClientIdentifier(uniqueId)
+        .withClientIdentifier(_user)
         .startClean()
         .authenticateAs(_user, _pass);
     client.connectionMessage = connMess;
@@ -554,6 +550,8 @@ class _MQTTClientState extends State<MQTTClient> {
     client.subscribe(gpsLatTopic, MqttQos.atMostOnce);
     const gpsLonTopic = 'router/gps/lon';
     client.subscribe(gpsLonTopic, MqttQos.atMostOnce);
+    const notificationTopic = 'notifications/#';
+    client.subscribe(notificationTopic, MqttQos.atMostOnce);
 
     client.updates!.listen((List<MqttReceivedMessage<MqttMessage?>>? c) {
       final recMess = c![0].payload as MqttPublishMessage;
@@ -640,9 +638,12 @@ class _MQTTClientState extends State<MQTTClient> {
           });
           break;
         default:
-          print(
-              'EXAMPLE::Change notification:: topic is <${c[0].topic}>, payload is <-- $pt -->');
+          //print('EXAMPLE::Change notification:: topic is <${c[0].topic}>, payload is <-- $pt -->');
           break;
+      }
+      if (c[0].topic.contains('notifications')) {
+        String title = c[0].topic.substring(c[0].topic.indexOf('/') + 1);
+        _notificationService.showNotification(title, pt);
       }
     });
 
