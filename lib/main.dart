@@ -12,7 +12,7 @@ import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'leveling_bubble.dart';
+import 'package:capsule2024/widget/leveling_bubble.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
