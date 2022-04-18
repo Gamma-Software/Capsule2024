@@ -643,14 +643,7 @@ class _MQTTClientState extends State<MQTTClient> {
       }
       if (c[0].topic.contains('notifications')) {
         String title = c[0].topic.substring(c[0].topic.indexOf('/') + 1);
-        int number = 0;
-        for (int i = 0; i <= title.length - 8; i += 8) {
-          final hex = title.substring(i, i + 8);
-          number = int.parse(hex, radix: 16);
-        }
-        final rand = Random().nextInt(100000);
-        print("number:" + rand.toString());
-        _notificationService.showNotification(title, pt, rand);
+        _notificationService.showNotification(title, pt);
       }
     });
 

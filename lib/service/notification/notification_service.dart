@@ -6,6 +6,9 @@ class NotificationService {
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
 
+  // dynamic list of notifications
+  List<String> _notifications = [];
+
   factory NotificationService() {
     return _notificationService;
   }
@@ -27,13 +30,21 @@ class NotificationService {
         onSelectNotification: selectNotification);
   }
 
-  Future showNotification(String title, String? body, int id) async {
+  Future showNotification(String title, String? body) async {
+    // If the notification is not in the list add it
+    if (!_notifications.contains(title)) {
+      _notifications.add(title);
+    }
+
+    // Get the notification index
+    int index = _notifications.indexOf(title);
+
     await flutterLocalNotificationsPlugin.show(
-        id,
-        title,
+        index,
+        title + index.toString(),
         body,
         const NotificationDetails(
-            android: AndroidNotificationDetails("1", "applicationName",
+            android: AndroidNotificationDetails("0", "applicationName",
                 channelDescription: 'notification')),
         payload: 'data');
   }
