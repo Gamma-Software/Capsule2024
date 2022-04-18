@@ -342,15 +342,17 @@ class _MQTTClientState extends State<MQTTClient> {
                   _saveParams();
                 },
               )),
-          FloatingActionButton.extended(
-            label: const Text('Connect'), // <-- Text
-            backgroundColor: Colors.white,
-            icon: const Icon(
-              Icons.cloud_rounded,
-              size: 24.0,
-            ),
-            onPressed: _connect,
-          ),
+          Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 50),
+              child: FloatingActionButton.extended(
+                label: const Text('Connect'), // <-- Text
+                backgroundColor: Colors.white,
+                icon: const Icon(
+                  Icons.cloud_rounded,
+                  size: 24.0,
+                ),
+                onPressed: _connect,
+              )),
         ],
       ),
     );
