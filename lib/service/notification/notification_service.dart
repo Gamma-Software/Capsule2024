@@ -40,7 +40,7 @@ class NotificationService {
 
     await flutterLocalNotificationsPlugin.show(
         index,
-        title + index.toString(),
+        title,
         body,
         const NotificationDetails(
             android: AndroidNotificationDetails("0", "applicationName",
