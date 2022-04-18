@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
 class LevelingBubble extends CustomPainter {
@@ -26,15 +25,15 @@ class LevelingBubble extends CustomPainter {
       Paint()..shader = gradient.createShader(rect),
     );
 
-    var paint = Paint()..color = Color.fromARGB(255, 255, 255, 255);
+    var paint = Paint()..color = const Color.fromARGB(255, 255, 255, 255);
     canvas.drawLine(Offset(size.height / 2, size.width / 2 - 150),
         Offset(size.height / 2, size.width / 2 + 150), paint);
     canvas.drawLine(Offset(size.height / 2 - 150, size.width / 2),
         Offset(size.height / 2 + 150, size.width / 2), paint);
-    if (levelingBubbleX <= 0.1 &&
-        levelingBubbleX >= -0.1 &&
-        levelingBubbleY <= 0.1 &&
-        levelingBubbleY >= -0.1) {
+    if (levelingBubbleX <= 0.05 &&
+        levelingBubbleX >= -0.05 &&
+        levelingBubbleY <= 0.05 &&
+        levelingBubbleY >= -0.05) {
       leveled = true;
     } else {
       leveled = false;
@@ -64,28 +63,6 @@ class LevelingBubble extends CustomPainter {
       ..style = PaintingStyle.fill;
     canvas.drawCircle(
         Offset(levelingBubbleX * 150, levelingBubbleY * 150), 15, paintBubble);
-  }
-
-  @override
-  SemanticsBuilderCallback get semanticsBuilder {
-    return (Size size) {
-      // Annotate a rectangle containing the picture of the sun
-      // with the label "Sun". When text to speech feature is enabled on the
-      // device, a user will be able to locate the sun on this picture by
-      // touch.
-      Rect rect = Offset.zero & size;
-      final double width = size.shortestSide * 0.4;
-      rect = const Alignment(0.8, -0.9).inscribe(Size(width, width), rect);
-      return <CustomPainterSemantics>[
-        CustomPainterSemantics(
-          rect: rect,
-          properties: const SemanticsProperties(
-            label: 'Sun',
-            textDirection: TextDirection.ltr,
-          ),
-        ),
-      ];
-    };
   }
 
   // Since this Sky painter has no fields, it always paints
