@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:capsule2024/service/notification/notification_service.dart';
+import 'package:capsule2024/service/settings/settings.dart';
 import 'package:latlong2/latlong.dart';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -9,7 +10,6 @@ import 'package:mqtt_client/mqtt_client.dart';
 import 'package:mqtt_client/mqtt_server_client.dart';
 import 'package:ndialog/ndialog.dart';
 import 'dart:async';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:capsule2024/widget/leveling_bubble.dart';
 
@@ -40,30 +40,33 @@ class _MQTTClientState extends State<MQTTClient> {
   final LatLng _capsuleLocation = LatLng(0.0, 0.0);
 
   MqttServerClient client = MqttServerClient('192.168.3.1', '');
-  String _user = "";
-  String _pass = "";
 
   final NotificationService _notificationService = NotificationService();
-
-  //Loading counter value on start
-  void _loadParams() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    _user = prefs.getString('user') ?? "";
-    _pass = prefs.getString('pass') ?? "";
-  }
-
-  //Incrementing counter after click
-  void _saveParams() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    prefs.setString('user', _user);
-    prefs.setString('pass', _pass);
-  }
+  final _preferencesService = PreferencesService();
+  final _usernameController = TextEditingController();
+  final _passwordController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _loadParams();
     _notificationService.init();
+    _populateFields();
+  }
+
+  void _populateFields() async {
+    final settings = await _preferencesService.getSettings();
+    setState(() {
+      _usernameController.text = settings.user;
+      _passwordController.text = settings.pass;
+    });
+  }
+
+  void savePref() async {
+    final settings = Settings(
+      user: _usernameController.text,
+      pass: _passwordController.text,
+    );
+    await _preferencesService.saveSettings(settings);
   }
 
   @override
@@ -314,53 +317,42 @@ class _MQTTClientState extends State<MQTTClient> {
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
               child: TextFormField(
                 obscureText: false,
+                controller: _usernameController,
                 decoration: const InputDecoration(
                   border: OutlineInputBorder(),
                   labelText: 'Utilisateur',
                 ),
-                initialValue: _user,
-                onChanged: (String user) {
-                  setState(() {
-                    _user = user;
-                  });
-                  _saveParams();
-                },
               )),
           Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
               child: TextFormField(
                 obscureText: true,
+                controller: _passwordController,
                 decoration: const InputDecoration(
                   border: OutlineInputBorder(),
                   labelText: 'Mot de passe',
                 ),
-                initialValue: _pass,
-                onChanged: (String pass) {
-                  setState(() {
-                    _pass = pass;
-                  });
-                  _saveParams();
-                },
               )),
-          Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 50),
-              child: FloatingActionButton.extended(
-                label: const Text('Connect'), // <-- Text
-                backgroundColor: Colors.white,
-                icon: const Icon(
-                  Icons.cloud_rounded,
-                  size: 24.0,
-                ),
-                onPressed: _connect,
-              )),
+          FloatingActionButton.extended(
+            label: const Text('Connect'), // <-- Text
+            backgroundColor: Colors.white,
+            icon: const Icon(
+              Icons.cloud_rounded,
+              size: 24.0,
+            ),
+            onPressed: _connect,
+          ),
         ],
       ),
     );
   }
 
   _connect() async {
+    // Save the credentials
+    savePref();
+
     // Check that the credentials are not empty
-    if (_user.isEmpty || _pass.isEmpty) {
+    if (_usernameController.text.isEmpty || _passwordController.text.isEmpty) {
       showDialog(
           context: context,
           builder: (BuildContext context) {
@@ -484,9 +476,9 @@ class _MQTTClientState extends State<MQTTClient> {
     client.pongCallback = pong;
 
     final MqttConnectMessage connMess = MqttConnectMessage()
-        .withClientIdentifier(_user)
+        .withClientIdentifier(_usernameController.text)
         .startClean()
-        .authenticateAs(_user, _pass);
+        .authenticateAs(_usernameController.text, _passwordController.text);
     client.connectionMessage = connMess;
 
     await client.connect();
