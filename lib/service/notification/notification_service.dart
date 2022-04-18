@@ -7,7 +7,7 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
 
   // dynamic list of notifications
-  List<String> _notifications = [];
+  final List<String> _notifications = [];
 
   factory NotificationService() {
     return _notificationService;
@@ -15,14 +15,13 @@ class NotificationService {
 
   Future selectNotification(String? payload) async {
     //Handle notification tapped logic here
-    print("Notification");
   }
 
   Future<void> init() async {
-    final AndroidInitializationSettings initializationSettingsAndroid =
+    const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('app_icon');
 
-    final InitializationSettings initializationSettings =
+    const InitializationSettings initializationSettings =
         InitializationSettings(
             android: initializationSettingsAndroid, iOS: null, macOS: null);
 
