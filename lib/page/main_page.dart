@@ -45,19 +45,6 @@ class _MQTTClientState extends State<MQTTClient> {
 
   final NotificationService _notificationService = NotificationService();
 
-  @override
-  void initState() {
-    super.initState();
-    _loadParams();
-    _notificationService.init();
-  }
-
-  @override
-  void dispose() {
-    idTextController.dispose();
-    super.dispose();
-  }
-
   //Loading counter value on start
   void _loadParams() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -73,283 +60,300 @@ class _MQTTClientState extends State<MQTTClient> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _loadParams();
+    _notificationService.init();
+  }
+
+  @override
+  void dispose() {
+    idTextController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return DefaultTabController(
         length: 3,
         child: Scaffold(
-          appBar: AppBar(
-            title: const Text("Capsule 2024"),
-            actions: <Widget>[
-              Padding(
-                  padding: const EdgeInsets.only(right: 20),
-                  child: GestureDetector(
-                      onTap: !isConnected ? _connect : _disconnect,
-                      child: Icon(
-                        !isConnected ? Icons.cloud_off : Icons.cloud_rounded,
-                      ))),
-              //Padding(
-              //    padding: const EdgeInsets.only(right: 20),
-              //    child: GestureDetector(
-              //        onTap: () {}, child: const Icon(Icons.settings)))
-            ],
-            bottom: isConnected
-                ? const TabBar(
-                    tabs: [
-                      Tab(icon: Icon(Icons.directions_car)),
-                      Tab(icon: Icon(Icons.launch_outlined)),
-                      Tab(icon: Icon(Icons.monitor)),
-                    ],
-                  )
-                : null,
-          ),
-          body: isConnected
-              ? TabBarView(
-                  children: [
-                    Column(
-                      children: [
-                        // Using Curves.bounceIn
-                        Container(
-                          width: double.infinity,
-                          height: 100,
-                          color: Colors.transparent,
-                          child: Align(
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              "Voltage batterie: " +
-                                  _analogInValue.toString() +
-                                  "V",
-                              style: const TextStyle(
-                                  fontSize: 30, color: Colors.white),
-                            ),
-                          ),
-                        ),
-                        // Using Curves.bounceIn
-                        Container(
-                          width: double.infinity,
-                          height: 100,
-                          color: Colors.transparent,
-                          child: Align(
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              "Input power: " + _outputPowerState.toString(),
-                              style: const TextStyle(
-                                  fontSize: 30, color: Colors.white),
-                            ),
-                          ),
-                        ),
-                        Container(
-                          width: double.infinity,
-                          height: 100,
-                          child: Align(
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              "Portes: " +
-                                  (_digitalInputState ? "ouvertes" : "fermées"),
-                              style: const TextStyle(
-                                  fontSize: 30, color: Colors.white),
-                            ),
-                          ),
-                        ),
-                        Container(
-                          width: double.infinity,
-                          height: 100,
-                          child: Align(
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              "Isolated input: " +
-                                  (_isolatedInputState ? "high" : "low"),
-                              style: const TextStyle(
-                                  fontSize: 30, color: Colors.white),
-                            ),
-                          ),
-                        ), // Using Curves.elasticInOut
-                        Column(
-                          children: <Widget>[
-                            ListTile(
-                              title: Text(
-                                'Relay',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .subtitle1
-                                    ?.copyWith(color: Colors.white),
-                              ),
-                              leading: Switch(
-                                value: _relayState,
-                                activeColor: const Color(0xFF6200EE),
-                                onChanged: (bool value) {
-                                  setRelay(value);
-                                  setState(() {
-                                    _relayState = value;
-                                  });
-                                },
-                              ),
-                            ),
-                            ListTile(
-                              title: Text(
-                                'Output1',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .subtitle1
-                                    ?.copyWith(color: Colors.white),
-                              ),
-                              leading: Switch(
-                                value: _outputState,
-                                activeColor: const Color(0xFF6200EE),
-                                onChanged: (bool value) {
-                                  setOutput1(value);
-                                  setState(() {
-                                    _outputState = value;
-                                  });
-                                },
-                              ),
-                            ),
-                            ListTile(
-                              title: Text(
-                                'OutputPower',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .subtitle1
-                                    ?.copyWith(color: Colors.white),
-                              ),
-                              leading: Switch(
-                                value: _outputPowerState,
-                                activeColor: const Color(0xFF6200EE),
-                                onChanged: (bool value) {
-                                  setOutputPower(value);
-                                  setState(() {
-                                    _outputPowerState = value;
-                                  });
-                                },
-                              ),
-                            ),
-                          ],
-                        )
-                      ],
-                    ),
-                    Stack(children: <Widget>[
-                      FlutterMap(
-                        options: MapOptions(
-                          center: _capsuleLocation,
-                          zoom: 13.0,
-                        ),
-                        layers: [
-                          TileLayerOptions(
-                            urlTemplate:
-                                "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-                            subdomains: ['a', 'b', 'c'],
-                            attributionBuilder: (_) {
-                              return const Text("© OpenStreetMap contributors");
-                            },
-                          ),
-                          MarkerLayerOptions(
-                            markers: [
-                              Marker(
-                                width: 150.0,
-                                height: 150.0,
-                                point: _capsuleLocation,
-                                rotate: false,
-                                builder: (ctx) => const Icon(
-                                  Icons.gps_fixed,
-                                  color: Colors.lightBlue,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      Align(
-                          alignment: Alignment.bottomCenter,
-                          child: FloatingActionButton.extended(
-                              label:
-                                  const Text('Trajet vers Capsule'), // <-- Text
-                              backgroundColor: Colors.white,
-                              icon: const Icon(
-                                Icons.near_me,
-                                size: 24.0,
-                              ),
-                              onPressed: () {
-                                MapsLauncher.launchCoordinates(
-                                    _capsuleLocation.latitude,
-                                    _capsuleLocation.longitude,
-                                    'Capsule est ici');
-                              })),
-                    ]),
-                    // align it to the bottom center, you can try different options too (e.g topLeft,centerLeft)
-                    Center(
-                      child: TweenAnimationBuilder(
-                        duration: const Duration(seconds: 1),
-                        tween: Tween(
-                            begin: (Random().nextDouble() - 0.5) *
-                                Random().nextDouble(),
-                            end: (Random().nextDouble() - 0.5) *
-                                Random().nextDouble()),
-                        curve: Curves.linear,
-                        builder: (BuildContext context, dynamic value,
-                            Widget? child) {
-                          return CustomPaint(
-                            painter: LevelingBubble(
-                                levelingBubbleX: value, levelingBubbleY: value),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                )
-              : Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: <Widget>[
-                      const Text(
-                        "Identifiant et mot de passe",
-                        style: TextStyle(fontSize: 20),
-                      ),
-                      Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 16),
-                          child: TextFormField(
-                            obscureText: false,
-                            decoration: const InputDecoration(
-                              border: OutlineInputBorder(),
-                              labelText: 'Utilisateur',
-                            ),
-                            initialValue: _user,
-                            onChanged: (String user) {
-                              setState(() {
-                                _user = user;
-                              });
-                              _saveParams();
-                            },
-                          )),
-                      Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 16),
-                          child: TextFormField(
-                            obscureText: true,
-                            decoration: const InputDecoration(
-                              border: OutlineInputBorder(),
-                              labelText: 'Mot de passe',
-                            ),
-                            initialValue: _pass,
-                            onChanged: (String pass) {
-                              setState(() {
-                                _pass = pass;
-                              });
-                              _saveParams();
-                            },
-                          )),
-                      FloatingActionButton.extended(
-                        label: const Text('Connect'), // <-- Text
-                        backgroundColor: Colors.white,
-                        icon: const Icon(
-                          Icons.cloud_rounded,
-                          size: 24.0,
-                        ),
-                        onPressed: _connect,
-                      ),
-                    ],
-                  ),
-                ),
+          appBar: buildBar(),
+          body: isConnected ? buildTabs() : buildLogin(),
         ));
+  }
+
+  AppBar buildBar() {
+    return AppBar(
+      title: const Text("Capsule 2024"),
+      actions: <Widget>[
+        Padding(
+            padding: const EdgeInsets.only(right: 20),
+            child: GestureDetector(
+                onTap: !isConnected ? _connect : _disconnect,
+                child: Icon(
+                  !isConnected ? Icons.cloud_off : Icons.cloud_rounded,
+                ))),
+        //Padding(
+        //    padding: const EdgeInsets.only(right: 20),
+        //    child: GestureDetector(
+        //        onTap: () {}, child: const Icon(Icons.settings)))
+      ],
+      bottom: isConnected
+          ? const TabBar(
+              tabs: [
+                Tab(icon: Icon(Icons.directions_car)),
+                Tab(icon: Icon(Icons.launch_outlined)),
+                Tab(icon: Icon(Icons.monitor)),
+              ],
+            )
+          : null,
+    );
+  }
+
+  Widget buildTabs() {
+    return TabBarView(
+      children: [
+        buildRouterTab(),
+        buildLocateTab(),
+        buildLevelTab(),
+      ],
+    );
+  }
+
+  Widget buildRouterTab() {
+    return Column(
+      children: [
+        // Using Curves.bounceIn
+        Container(
+          width: double.infinity,
+          height: 100,
+          color: Colors.transparent,
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              "Voltage batterie: " + _analogInValue.toString() + "V",
+              style: const TextStyle(fontSize: 30, color: Colors.white),
+            ),
+          ),
+        ),
+        // Using Curves.bounceIn
+        Container(
+          width: double.infinity,
+          height: 100,
+          color: Colors.transparent,
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              "Input power: " + _outputPowerState.toString(),
+              style: const TextStyle(fontSize: 30, color: Colors.white),
+            ),
+          ),
+        ),
+        SizedBox(
+          width: double.infinity,
+          height: 100,
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              "Portes: " + (_digitalInputState ? "ouvertes" : "fermées"),
+              style: const TextStyle(fontSize: 30, color: Colors.white),
+            ),
+          ),
+        ),
+        SizedBox(
+          width: double.infinity,
+          height: 100,
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              "Isolated input: " + (_isolatedInputState ? "high" : "low"),
+              style: const TextStyle(fontSize: 30, color: Colors.white),
+            ),
+          ),
+        ), // Using Curves.elasticInOut
+        Column(
+          children: <Widget>[
+            ListTile(
+              title: Text(
+                'Relay',
+                style: Theme.of(context)
+                    .textTheme
+                    .subtitle1
+                    ?.copyWith(color: Colors.white),
+              ),
+              leading: Switch(
+                value: _relayState,
+                activeColor: const Color(0xFF6200EE),
+                onChanged: (bool value) {
+                  setRelay(value);
+                  setState(() {
+                    _relayState = value;
+                  });
+                },
+              ),
+            ),
+            ListTile(
+              title: Text(
+                'Output1',
+                style: Theme.of(context)
+                    .textTheme
+                    .subtitle1
+                    ?.copyWith(color: Colors.white),
+              ),
+              leading: Switch(
+                value: _outputState,
+                activeColor: const Color(0xFF6200EE),
+                onChanged: (bool value) {
+                  setOutput1(value);
+                  setState(() {
+                    _outputState = value;
+                  });
+                },
+              ),
+            ),
+            ListTile(
+              title: Text(
+                'OutputPower',
+                style: Theme.of(context)
+                    .textTheme
+                    .subtitle1
+                    ?.copyWith(color: Colors.white),
+              ),
+              leading: Switch(
+                value: _outputPowerState,
+                activeColor: const Color(0xFF6200EE),
+                onChanged: (bool value) {
+                  setOutputPower(value);
+                  setState(() {
+                    _outputPowerState = value;
+                  });
+                },
+              ),
+            ),
+          ],
+        )
+      ],
+    );
+  }
+
+  Widget buildLocateTab() {
+    return Stack(children: <Widget>[
+      FlutterMap(
+        options: MapOptions(
+          center: _capsuleLocation,
+          zoom: 13.0,
+        ),
+        layers: [
+          TileLayerOptions(
+            urlTemplate: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+            subdomains: ['a', 'b', 'c'],
+            attributionBuilder: (_) {
+              return const Text("© OpenStreetMap contributors");
+            },
+          ),
+          MarkerLayerOptions(
+            markers: [
+              Marker(
+                width: 150.0,
+                height: 150.0,
+                point: _capsuleLocation,
+                rotate: false,
+                builder: (ctx) => const Icon(
+                  Icons.gps_fixed,
+                  color: Colors.lightBlue,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+      Align(
+          alignment: Alignment.bottomCenter,
+          child: FloatingActionButton.extended(
+              label: const Text('Trajet vers Capsule'), // <-- Text
+              backgroundColor: Colors.white,
+              icon: const Icon(
+                Icons.near_me,
+                size: 24.0,
+              ),
+              onPressed: () {
+                MapsLauncher.launchCoordinates(_capsuleLocation.latitude,
+                    _capsuleLocation.longitude, 'Capsule est ici');
+              })),
+    ]);
+  }
+
+  Widget buildLevelTab() {
+    return Center(
+      child: TweenAnimationBuilder(
+        duration: const Duration(seconds: 1),
+        tween: Tween(
+            begin: (Random().nextDouble() - 0.5) * Random().nextDouble(),
+            end: (Random().nextDouble() - 0.5) * Random().nextDouble()),
+        curve: Curves.linear,
+        builder: (BuildContext context, dynamic value, Widget? child) {
+          return CustomPaint(
+            painter:
+                LevelingBubble(levelingBubbleX: value, levelingBubbleY: value),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget buildLogin() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          const Text(
+            "Identifiant et mot de passe",
+            style: TextStyle(fontSize: 20),
+          ),
+          Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+              child: TextFormField(
+                obscureText: false,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  labelText: 'Utilisateur',
+                ),
+                initialValue: _user,
+                onChanged: (String user) {
+                  setState(() {
+                    _user = user;
+                  });
+                  _saveParams();
+                },
+              )),
+          Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+              child: TextFormField(
+                obscureText: true,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  labelText: 'Mot de passe',
+                ),
+                initialValue: _pass,
+                onChanged: (String pass) {
+                  setState(() {
+                    _pass = pass;
+                  });
+                  _saveParams();
+                },
+              )),
+          FloatingActionButton.extended(
+            label: const Text('Connect'), // <-- Text
+            backgroundColor: Colors.white,
+            icon: const Icon(
+              Icons.cloud_rounded,
+              size: 24.0,
+            ),
+            onPressed: _connect,
+          ),
+        ],
+      ),
+    );
   }
 
   _connect() async {
